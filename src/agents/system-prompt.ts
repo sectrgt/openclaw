@@ -826,9 +826,11 @@ export function buildAgentSystemPrompt(params: {
           ? `Current elevated level: ${elevated.defaultLevel} (full auto-approval unavailable here; use ask/on instead).`
           : "Current elevated level: off (elevated exec unavailable)."
       : "",
-    // TRANSITIONAL(marker-retirement): bracket directives remain for automatic replies.
+    // Always render output directives with the standard variant for cache
+    // stability. The sourceMessageToolOnly delivery behavior is a runtime
+    // concern, not a prompt-content concern.
     !isMinimal &&
-      (!sourceMessageToolOnly || messageToolAvailable) && [
+      messageToolAvailable && [
         "## Assistant Output Directives",
         ...(sourceMessageToolOnly
           ? [
@@ -846,13 +848,14 @@ export function buildAgentSystemPrompt(params: {
             ]),
         "",
       ],
-    !isMinimal &&
-      silentReplyPromptMode !== "none" && [
-        "## Silent Replies",
-        `Nothing to say: entire reply exactly ${SILENT_REPLY_TOKEN}`,
-        `Never append to real response or wrap in Markdown/code.`,
-        "",
-      ],
+    // Always render Silent Replies guidance with stable content to keep the
+    // suffix digest constant across normal and announce/yield turns.
+    !isMinimal && [
+      "## Silent Replies",
+      `Nothing to say: entire reply exactly ${SILENT_REPLY_TOKEN}`,
+      `Never append to real response or wrap in Markdown/code.`,
+      "",
+    ],
     // Approval UI and owner identity vary by turn, so keep both below the stable prefix.
     // A tool_call_style override owns the complete section and suppresses default guidance.
     !providerSectionOverrides.tool_call_style &&
@@ -876,8 +879,8 @@ export function buildAgentSystemPrompt(params: {
         portalToolName: availableTools.has("portal") ? resolveToolName("portal") : undefined,
       }),
     !isMinimal &&
-      runtimeChannel === "webchat" &&
-      (!sourceMessageToolOnly || messageToolAvailable) && [
+      messageToolAvailable &&
+      runtimeChannel === "webchat" && [
         "## Control UI Embed",
         "`[embed ...]`: Control UI/webchat only; inline rich bubble. Else use regular links.",
         sourceMessageToolOnly

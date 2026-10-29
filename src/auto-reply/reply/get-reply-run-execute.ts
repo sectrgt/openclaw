@@ -36,7 +36,7 @@ import {
 } from "../../sessions/user-turn-transcript.js";
 import { buildChannelUserTurnSender } from "../../sessions/user-turn-transcript.metadata.js";
 import { isReasoningTagProvider } from "../../utils/provider-utils.js";
-import { isConfiguredCommandOwner } from "../command-auth.js";
+import { isConfiguredCommandOwner, resolveConfiguredCommandOwners } from "../command-auth.js";
 import { bindCommandOwnerAuthority, getCommandOwnerAuthority } from "../command-owner-authority.js";
 import { getGroupThreadTurn } from "../group-thread-context.js";
 import { resolveInternalTurnTranscript } from "../internal-turn-source.js";
@@ -555,7 +555,12 @@ export async function executePreparedReplyRun(state: PreparedReplyRunAdmission) 
           : undefined,
       blockReplyBreak: resolvedBlockStreamingBreak,
       ownerNumbers: resolveOwnerPromptNumbers({
-        ownerNumbers: command.ownerList,
+        ownerNumbers: command.ownerList?.length
+          ? command.ownerList
+          : resolveConfiguredCommandOwners(cfg, {
+              channel: replyRoute.channel,
+              accountId: replyRoute.accountId,
+            }),
         senderId: command.senderId,
         senderIsOwner: command.senderIsOwner,
       }),

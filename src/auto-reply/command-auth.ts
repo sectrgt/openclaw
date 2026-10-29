@@ -577,6 +577,17 @@ export async function resolveCommandAuthorizationAsync(
   return resolveCommandAuthorizationState(params, prepared).authorization;
 }
 
+export function resolveConfiguredCommandOwners(
+  cfg: OpenClawConfig,
+  requester: { channel?: string; accountId?: string },
+): string[] {
+  const providerId = normalizeAnyChannelId(requester.channel) ?? requester.channel;
+  const plugin = providerId ? getLoadedChannelPluginForRead(providerId) : undefined;
+  return stripWildcardAllowFrom(
+    resolveOwnerAllowFromList({ cfg, plugin, providerId, accountId: requester.accountId }),
+  );
+}
+
 export function isConfiguredCommandOwner(
   cfg: OpenClawConfig,
   requester: { channel?: string; accountId?: string; senderId?: string },
