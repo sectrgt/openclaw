@@ -64,3 +64,47 @@ describe("system-prompt suffix cache stability (#150081)", () => {
     expect(gateText).not.toContain("sourceMessageToolOnly");
   });
 });
+
+// Regression tests for prompt-cache fingerprint stability across transcript reloads.
+//
+// When messages are reloaded from the transcript database, fresh message objects
+// are created with different references and potentially different timestamps
+// (persistence time vs original). The reference-based divergence check caused
+// false-positive history rewrite detections that dropped the prompt cache from
+// ~90k tokens to ~3k, forcing full recomputation. The fix compares fingerprint
+// identity (content + non-omitted envelope fields) instead of object references,
+// and omits timestamp from the envelope fingerprint since it is persistence
+// metadata that does not appear in the prompt sent to the LLM.
+
+describe("prompt-cache fingerprint stability across reloads", () => {
+  it("omits timestamp from the envelope fingerprint", async () => {
+    const source = await import("node:fs").then((fs) =>
+      fs.readFileSync(
+        new URL("./embedded-agent-runner/prompt-cache-history.ts", import.meta.url),
+        "utf-8",
+      ),
+    );
+    expect(source).toContain('"timestamp"');
+    expect(source).toContain("MESSAGE_ENVELOPE_OMITTED_FIELDS");
+    // Verify timestamp is in the omit set
+    const omitSetMatch = source.match(/MESSAGE_ENVELOPE_OMITTED_FIELDS = new Set\(\[([^\]]+)\]\)/);
+    expect(omitSetMatch).toBeTruthy();
+    expect(omitSetMatch![1]).toContain('"timestamp"');
+  });
+
+  it("uses fingerprint identity comparison instead of reference comparison", async () => {
+    const source = await import("node:fs").then((fs) =>
+      fs.readFileSync(
+        new URL("./embedded-agent-runner/prompt-cache-observability.ts", import.meta.url),
+        "utf-8",
+      ),
+    );
+    // The old code used: message !== history[index]
+    // The new code uses: message !== history[index] && message.packed.slice(...) !== ...
+    expect(source).not.toContain(
+      "previous.history.findIndex((message, index) => message !== history[index])",
+    );
+    expect(source).toContain("identityLength");
+    expect(source).toContain("packed.slice");
+  });
+});
