@@ -1,7 +1,7 @@
 import type { AdmissionDiagnostics } from "../infra/diagnostics-timeline.js";
 
 export const SESSION_WATCHDOG_WARNING_MS = 120_000;
-export const SESSION_WATCHDOG_ABORT_FLOOR_MS = 5 * 60_000;
+export const SESSION_WATCHDOG_ABORT_FLOOR_MS = 24 * 60 * 60_000; // 24 hours — allow long compaction runs to complete
 export const SESSION_WATCHDOG_QUIET_TOOL_MS = 15 * 60_000;
 export const SESSION_WATCHDOG_CLEANUP_MS = 60_000;
 
